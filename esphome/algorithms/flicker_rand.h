@@ -11,18 +11,22 @@
 // hundred ms). Both rates are trivial for either random source below; the
 // choice here is about entropy quality and power behavior, not throughput.
 //
-// Default (no macro defined): esp_random(), the ESP32 hardware RNG. It is
-// fed by RF noise from the WiFi/BT radios when active, falling back to an
-// internal asynchronous timer otherwise. This is a much higher-quality,
+// Default (no macro defined): esp_random(), the ESP32 hardware RNG. Per
+// Espressif's docs, it produces true random numbers when the WiFi/BT radios
+// are active (they feed it ADC-sampled RF noise); otherwise its output
+// should be treated as pseudo-random, based only on a secondary internal
+// oscillator entropy source. Either way, it's still a higher-quality,
 // non-deterministic source than libc's rand(), which on newlib is a simple,
-// low-period, unseeded LCG that produces the exact same sequence every boot.
+// low-period LCG that -- unless explicitly seeded -- produces the exact
+// same sequence every boot.
 //
 // Define VELAFLAME_BATTERY_POWERED to use rand() instead. Battery-powered
 // builds are expected to keep the WiFi/BT radios off most of the time to
-// conserve power, so esp_random()'s entropy quality degrades to its internal
-// timer fallback anyway; rand()'s lower-quality sequence is visually
-// indistinguishable for this cosmetic effect. Define the macro via an
-// ESPHome/PlatformIO build flag, e.g.:
+// conserve power, at which point esp_random() offers little quality benefit
+// over rand() for this cosmetic effect anyway. In this mode, velaflame.yaml's
+// on_boot handler seeds rand() once from micros() so the flicker pattern
+// isn't identical on every power-up. Define the macro via an ESPHome/
+// PlatformIO build flag, e.g.:
 //
 //   esphome:
 //     platformio_options:
