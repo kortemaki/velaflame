@@ -1,0 +1,27 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  doctest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download doctest
+        run: |
+          curl -sL -o tests/doctest.h \
+            https://raw.githubusercontent.com/doctest/doctest/v2.4.11/doctest/doctest.h
+
+      - name: Compile tests
+        run: |
+          cd tests
+          g++ -std=c++14 -I../esphome/algorithms \
+            test_flicker_math.cpp -o test_flicker_math
+
+      - name: Run tests
+        run: tests/test_flicker_math
