@@ -34,21 +34,31 @@
 //         - -DVELAFLAME_BATTERY_POWERED
 #pragma once
 
+#include <cstdint>
+
 #if defined(VELAFLAME_BATTERY_POWERED)
 #include <cstdlib>
 #else
 #include <esp_random.h>
 #endif
-
 namespace flicker_math {
+  // Random draws are reduced modulo this scale, then divided by it to land in
+  // [0.0, 1.0). Kept as a power of two so the compiler can turn the modulo
+  // into a bitwise AND and the division into an exact multiply-by-reciprocal.
+  // That matters here specifically because ESP32-C3 has no hardware FPU, so
+  // every float op -- this division included -- is emulated in software.
+  constexpr uint32_t kRandomScale = 2 << 9;
 
 // Returns a random value uniformly distributed in [0.0, 1.0).
 inline float random_unit() {
-#if defined(VELAFLAME_BATTERY_POWERED)
-  return static_cast<float>(rand() % 1000) / 1000.0f;
-#else
-  return static_cast<float>(esp_random() % 1000) / 1000.0f;
-#endif
+  #if defined(VELAFLAME_BATTERY_POWERED)
+  // rand() returns a non-negative int by contract; cast to unsigned so the
+  // modulo-by-power-of-two -> bitwise AND optimization applies here too.
+  uint32_t draw = static_cast<uint32_t>(rand());
+  #else
+  uint32_t draw = esp_random();
+  #endif
+  return static_cast<float>(draw % kRandomScale) / static_cast<float>(kRandomScale);
 }
 
 }  // namespace flicker_math

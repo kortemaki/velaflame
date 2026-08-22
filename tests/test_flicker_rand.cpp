@@ -58,7 +58,7 @@ TEST_CASE("random_unit: battery-powered mode matches libc rand()") {
     // Reproduce the same rand() call from the same seed to confirm
     // random_unit() is drawing directly from libc's rand() sequence.
     srand(1234);
-    float expected = static_cast<float>(rand() % 1000) / 1000.0f;
+    float expected = static_cast<float>(rand() % 1024) / 1024.0f;
 
     CHECK(actual == doctest::Approx(expected));
 }
@@ -94,21 +94,21 @@ TEST_CASE("random_unit: default mode calls esp_random() exactly once") {
     float actual = flicker_math::random_unit();
 
     CHECK(esp_random_test_call_count() == calls_before + 1);
-    CHECK(actual == doctest::Approx(777.0f / 1000.0f));
+    CHECK(actual == doctest::Approx(777.0f / 1024.0f));
 }
 
 TEST_CASE("random_unit: default mode reflects whatever esp_random() returns") {
     esp_random_test_set_next(0);
     CHECK(flicker_math::random_unit() == doctest::Approx(0.0f));
 
-    esp_random_test_set_next(999);
-    CHECK(flicker_math::random_unit() == doctest::Approx(0.999f));
+    esp_random_test_set_next(1023);
+    CHECK(flicker_math::random_unit() == doctest::Approx(1023.0f / 1024.0f));
 
     // esp_random() returns a uint32_t; random_unit() must reduce it modulo
     // 1000 rather than overflowing or truncating some other way.
     esp_random_test_set_next(0xFFFFFFFFu);
     CHECK(flicker_math::random_unit() ==
-          doctest::Approx(static_cast<float>(0xFFFFFFFFu % 1000) / 1000.0f));
+          doctest::Approx(static_cast<float>(0xFFFFFFFFu % 1024) / 1024.0f));
 }
 
 TEST_CASE("random_unit: default mode result stays in [0, 1)") {
