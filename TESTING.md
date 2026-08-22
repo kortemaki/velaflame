@@ -9,8 +9,8 @@ test the real C++ off-target (on your dev machine) using
 [doctest](https://github.com/doctest/doctest) — a single-header C++ test
 framework included in the repo.
 
-Tests compile and run the actual C++ directly — no bindings layer, no Python — so
-any drift between the firmware math and the test expectations is a real failure.
+Tests compile and run the actual C++ directly, so any drift between the firmware
+math and the test expectations is a real failure.
 
 ## Prerequisites
 
@@ -20,8 +20,6 @@ A C++ compiler that supports C++14:
   from [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
   and select the **"Desktop development with C++"** workload.
 - **Linux / macOS:** gcc or clang.
-
-That's it — no Python, no package manager, no build system.
 
 ## Running the tests
 
