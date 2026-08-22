@@ -1,4 +1,4 @@
-name: Unit Tests
+name: Lint & Test
 
 on:
   push:
@@ -7,7 +7,74 @@ on:
     branches: [main]
 
 jobs:
+  yamllint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Run yamllint
+        run: uv tool run yamllint -s .
+
+  markdownlint:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run markdownlint
+        uses: DavidAnson/markdownlint-cli2-action@v19
+
+  cppcheck:
+    name: C++ static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get install -y cppcheck
+      - name: Run cppcheck
+        run: |
+          cppcheck --language=c++ --std=c++14 \
+            --enable=warning,performance,portability \
+            --error-exitcode=1 --quiet \
+            components/ esphome/algorithms/flicker_math.h
+
+  esphome-config:
+    name: ESPHome config validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Create dummy secrets and config overrides
+        run: |
+          echo 'wifi_ssid: "ci-test-network"' > secrets.yaml
+          echo 'wifi_password: "ci-test-password"' >> secrets.yaml
+          # Generate a valid 32-byte base64 key for CI validation
+          CI_KEY=$(python3 -c "import base64,os; print(base64.b64encode(os.urandom(32)).decode())")
+          sed -i "s|api_encryption_key: \"FAKE=\"|api_encryption_key: \"$CI_KEY\"|" config.yaml
+          sed -i "s|ota_password: \"FAKE\"|ota_password: \"ci-test\"|" config.yaml
+          sed -i "s|wifi_ap_password: \"FAKE\"|wifi_ap_password: \"ci-test-ap\"|" config.yaml
+      - name: Validate ESPHome config
+        run: uv tool run --from esphome esphome config config.yaml
+
+  spdx-headers:
+    name: SPDX license headers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check SPDX headers
+        run: |
+          missing=0
+          patterns='-name *.h -o -name *.cpp -o -name *.py -o -name *.yaml'
+          for f in $(find components/ esphome/ -type f \( $patterns \)); do
+            if ! grep -q 'SPDX-License-Identifier' "$f"; then
+              echo "Missing SPDX header: $f"
+              missing=1
+            fi
+          done
+          exit $missing
+
   doctest:
+    name: Unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
