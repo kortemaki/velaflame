@@ -47,6 +47,10 @@ class TLC59116Output : public Component, public i2c::I2CDevice {
     }
     if (!ok) {
       ESP_LOGE("tlc59116", "Failed to write MODE1 after retries - check I2C address and wiring");
+      if (this->enable_pin_ != nullptr) {
+        this->enable_pin_->digital_write(false);
+        ESP_LOGW("tlc59116", "Enable pin de-asserted due to setup failure");
+      }
       this->mark_failed();
       return;
     }
