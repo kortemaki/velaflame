@@ -3,7 +3,8 @@ secrets.yaml
 *.DS_Store
 *.gitignore
 
-# Test build artifacts
+# Test artifacts
+tests/doctest.h
 tests/*.exe
 tests/*.obj
 tests/*.pdb

@@ -7,7 +7,7 @@ The flicker algorithm's core math lives in
 standalone C++ header with **no ESPHome dependencies**. This lets us compile and
 test the real C++ off-target (on your dev machine) using
 [doctest](https://github.com/doctest/doctest) — a single-header C++ test
-framework included in the repo.
+framework.
 
 Tests compile and run the actual C++ directly, so any drift between the firmware
 math and the test expectations is a real failure.
@@ -21,20 +21,39 @@ A C++ compiler that supports C++14:
   and select the **"Desktop development with C++"** workload.
 - **Linux / macOS:** gcc or clang.
 
+That's it — no package manager, no build system.
+
 ## Running the tests
 
-### Windows (Developer PowerShell or Developer Command Prompt)
+### 1. Download doctest (one-time)
+
+[doctest](https://github.com/doctest/doctest) is a single-header test framework.
+Download it into the `tests/` directory (it is gitignored):
+
+```bash
+cd tests
+curl -LO https://raw.githubusercontent.com/doctest/doctest/v2.4.11/doctest/doctest.h
+```
+
+Or on Windows PowerShell:
 
 ```powershell
 cd tests
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/doctest/doctest/v2.4.11/doctest/doctest.h" -OutFile doctest.h
+```
+
+### 2. Compile and run
+
+**Windows** (Developer PowerShell or Developer Command Prompt):
+
+```powershell
 cl /std:c++14 /EHsc /I..\esphome\algorithms test_flicker_math.cpp /Fe:test_flicker_math.exe
 .\test_flicker_math.exe
 ```
 
-### Linux / macOS
+**Linux / macOS**:
 
 ```bash
-cd tests
 g++ -std=c++14 -I../esphome/algorithms test_flicker_math.cpp -o test_flicker_math
 ./test_flicker_math
 ```
