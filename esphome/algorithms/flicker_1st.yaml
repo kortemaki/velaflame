@@ -58,16 +58,10 @@
       if (lean_angle >= 360.0f) lean_angle -= 360.0f;
       if (lean_angle <    0.0f) lean_angle += 360.0f;
 
-      const float D2R = 0.017453293f;
-      float raw2 = cosf(lean_angle * D2R) * 0.5f + 0.5f;
-      float raw3 = cosf((lean_angle + 120.0f) * D2R) * 0.5f + 0.5f;
-      float raw4 = cosf((lean_angle + 240.0f) * D2R) * 0.5f + 0.5f;
-      float rmax = raw2; if (raw3 > rmax) rmax = raw3; if (raw4 > rmax) rmax = raw4;
-      if (rmax < 0.001f) rmax = 0.001f;
-      float lean_amp = wind * 0.45f;  // hot LED at 1.0, coldest at 1.0 - lean_amp
-      float lean_d2 = 1.0f - lean_amp * (1.0f - raw2 / rmax);
-      float lean_d3 = 1.0f - lean_amp * (1.0f - raw3 / rmax);
-      float lean_d4 = 1.0f - lean_amp * (1.0f - raw4 / rmax);
+      auto lf = flicker_math::lean_factors(lean_angle, wind);
+      float lean_d2 = lf.d2;
+      float lean_d3 = lf.d3;
+      float lean_d4 = lf.d4;
 
       // ── Skip output writes during color/brightness transitions ──
       // ESPHome's transition system writes uniform color to all_r/g/b/w (fan-out) at
@@ -93,104 +87,29 @@
       float rem_w   = id(light_main).remote_values.get_white();
 
       // ── Convert base RGB to HSV ──
-      // ESPHome normalizes so at least one channel = 1.0, giving val_h ≈ 1.0
-      float cmax = rem_r; if (rem_g > cmax) cmax = rem_g; if (rem_bv > cmax) cmax = rem_bv;
-      float cmin = rem_r; if (rem_g < cmin) cmin = rem_g; if (rem_bv < cmin) cmin = rem_bv;
-      float delta = cmax - cmin;
-      float hue = 0.0f;
-      float sat = (cmax > 0.001f) ? (delta / cmax) : 0.0f;
-      float val_h = cmax;
-      if (delta > 0.001f) {
-        if      (cmax == rem_r) hue = fmod((rem_g - rem_bv) / delta, 6.0f) / 6.0f;
-        else if (cmax == rem_g) hue = ((rem_bv - rem_r)  / delta + 2.0f) / 6.0f;
-        else                    hue = ((rem_r  - rem_g)   / delta + 4.0f) / 6.0f;
-        if (hue < 0.0f) hue += 1.0f;
-      }
+      auto base_hsv = flicker_math::rgb_to_hsv(rem_r, rem_g, rem_bv);
+      float hue   = base_hsv.h;
+      float sat   = base_hsv.s;
+      float val_h = base_hsv.v;
 
-      // ── Wavelength-based hue + saturation shift ──
-      // Dim → lower hue (longer wavelength): yellow→orange, blue→teal, purple→blue
-      // Dim → higher saturation: colors deepen as the flame cools
-      float global_hue_shift = -(1.0f - bri_mult) * wind * 0.10f;
-      float global_sat_boost = (1.0f - bri_mult) * wind * 0.20f;
+      float ghs = flicker_math::global_hue_shift(bri_mult, wind);
+      float gsb = flicker_math::global_sat_boost(bri_mult, wind);
 
-      // ── Per-LED output: apply lean + hue/sat shift, convert to RGB, gamma, set outputs ──
-      // Hot LED (lean=1.0): no extra shift. Cool LED (lean<1.0): extra redward + more saturated.
-      // gamma = 2.0 → output = val * val; directly drives all 12 channels.
-      {
-        float lean = lean_d2;
-        float led_hue = hue + global_hue_shift + (lean - 1.0f) * wind * 0.05f;
-        if (led_hue < 0.0f) led_hue = 0.0f;
-        if (led_hue > 1.0f) led_hue = 1.0f;
-        float sat_led = sat + global_sat_boost + (1.0f - lean) * wind * 0.10f;
-        if (sat_led > 1.0f) sat_led = 1.0f;
-        float h6 = led_hue * 6.0f; int hi = (int)h6; float f = h6 - (float)hi;
-        float p = val_h*(1.0f-sat_led), q = val_h*(1.0f-sat_led*f), t = val_h*(1.0f-sat_led*(1.0f-f));
-        float cr, cg, cb;
-        switch (hi % 6) {
-          case 0: cr=val_h; cg=t;     cb=p;     break;
-          case 1: cr=q;     cg=val_h; cb=p;     break;
-          case 2: cr=p;     cg=val_h; cb=t;     break;
-          case 3: cr=p;     cg=q;     cb=val_h; break;
-          case 4: cr=t;     cg=p;     cb=val_h; break;
-          default:cr=val_h; cg=p;     cb=q;     break;
-        }
-        float scale = rem_bri * bri_mult * lean * rem_col; if (scale > 1.0f) scale = 1.0f;
-        float wscale = rem_bri * bri_mult * lean * rem_w;  if (wscale > 1.0f) wscale = 1.0f;
-        float v;
-        v = scale * cr;  id(d2_r).set_level(v * v);
-        v = scale * cg;  id(d2_g).set_level(v * v);
-        v = scale * cb;  id(d2_b).set_level(v * v);
-        v = wscale;      id(d2_w).set_level(v * v);
-      }
-      {
-        float lean = lean_d3;
-        float led_hue = hue + global_hue_shift + (lean - 1.0f) * wind * 0.05f;
-        if (led_hue < 0.0f) led_hue = 0.0f;
-        if (led_hue > 1.0f) led_hue = 1.0f;
-        float sat_led = sat + global_sat_boost + (1.0f - lean) * wind * 0.10f;
-        if (sat_led > 1.0f) sat_led = 1.0f;
-        float h6 = led_hue * 6.0f; int hi = (int)h6; float f = h6 - (float)hi;
-        float p = val_h*(1.0f-sat_led), q = val_h*(1.0f-sat_led*f), t = val_h*(1.0f-sat_led*(1.0f-f));
-        float cr, cg, cb;
-        switch (hi % 6) {
-          case 0: cr=val_h; cg=t;     cb=p;     break;
-          case 1: cr=q;     cg=val_h; cb=p;     break;
-          case 2: cr=p;     cg=val_h; cb=t;     break;
-          case 3: cr=p;     cg=q;     cb=val_h; break;
-          case 4: cr=t;     cg=p;     cb=val_h; break;
-          default:cr=val_h; cg=p;     cb=q;     break;
-        }
-        float scale = rem_bri * bri_mult * lean * rem_col; if (scale > 1.0f) scale = 1.0f;
-        float wscale = rem_bri * bri_mult * lean * rem_w;  if (wscale > 1.0f) wscale = 1.0f;
-        float v;
-        v = scale * cr;  id(d3_r).set_level(v * v);
-        v = scale * cg;  id(d3_g).set_level(v * v);
-        v = scale * cb;  id(d3_b).set_level(v * v);
-        v = wscale;      id(d3_w).set_level(v * v);
-      }
-      {
-        float lean = lean_d4;
-        float led_hue = hue + global_hue_shift + (lean - 1.0f) * wind * 0.05f;
-        if (led_hue < 0.0f) led_hue = 0.0f;
-        if (led_hue > 1.0f) led_hue = 1.0f;
-        float sat_led = sat + global_sat_boost + (1.0f - lean) * wind * 0.10f;
-        if (sat_led > 1.0f) sat_led = 1.0f;
-        float h6 = led_hue * 6.0f; int hi = (int)h6; float f = h6 - (float)hi;
-        float p = val_h*(1.0f-sat_led), q = val_h*(1.0f-sat_led*f), t = val_h*(1.0f-sat_led*(1.0f-f));
-        float cr, cg, cb;
-        switch (hi % 6) {
-          case 0: cr=val_h; cg=t;     cb=p;     break;
-          case 1: cr=q;     cg=val_h; cb=p;     break;
-          case 2: cr=p;     cg=val_h; cb=t;     break;
-          case 3: cr=p;     cg=q;     cb=val_h; break;
-          case 4: cr=t;     cg=p;     cb=val_h; break;
-          default:cr=val_h; cg=p;     cb=q;     break;
-        }
-        float scale = rem_bri * bri_mult * lean * rem_col; if (scale > 1.0f) scale = 1.0f;
-        float wscale = rem_bri * bri_mult * lean * rem_w;  if (wscale > 1.0f) wscale = 1.0f;
-        float v;
-        v = scale * cr;  id(d4_r).set_level(v * v);
-        v = scale * cg;  id(d4_g).set_level(v * v);
-        v = scale * cb;  id(d4_b).set_level(v * v);
-        v = wscale;      id(d4_w).set_level(v * v);
-      }
+      // ── Per-LED output: compute shifted color, gamma-correct, write to hardware ──
+      auto write_led = [&](float lean,
+                           esphome::output::FloatOutput &out_r,
+                           esphome::output::FloatOutput &out_g,
+                           esphome::output::FloatOutput &out_b,
+                           esphome::output::FloatOutput &out_w) {
+        auto out = flicker_math::compute_led_output(
+            hue, sat, val_h, ghs, gsb, wind, lean,
+            rem_bri, bri_mult, rem_col, rem_w);
+        out_r.set_level(out.r);
+        out_g.set_level(out.g);
+        out_b.set_level(out.b);
+        out_w.set_level(out.w);
+      };
+
+      write_led(lean_d2, id(d2_r), id(d2_g), id(d2_b), id(d2_w));
+      write_led(lean_d3, id(d3_r), id(d3_g), id(d3_b), id(d3_w));
+      write_led(lean_d4, id(d4_r), id(d4_g), id(d4_b), id(d4_w));

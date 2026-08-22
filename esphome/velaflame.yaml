@@ -16,6 +16,8 @@ external_components:
 esphome:
   name: ${device_name}
   friendly_name: ${friendly_name}
+  includes:
+    - algorithms/flicker_math.h
   on_boot:
     priority: -100  # runs after state restore
     then:
