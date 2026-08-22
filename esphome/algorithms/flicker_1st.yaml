@@ -33,7 +33,7 @@
       slow_timer++;
       if (slow_timer >= 10) {
         slow_timer = 0;
-        float r = (float)(rand() % 1000) / 1000.0f;
+        float r = flicker_math::random_unit();
         r = r * r * r;  // cubic: mostly near 1.0, rare dramatic dips
         slow_target = 1.0f - r * (wind * 0.35f);
       }
@@ -42,7 +42,7 @@
       slow_b = slow_b * (1.0f - alpha) + slow_target * alpha;
 
       // ── Fast jitter layer: small turbulence every tick ──
-      float fast_noise = (float)(rand() % 1000) / 1000.0f;
+      float fast_noise = flicker_math::random_unit();
       float fast_target = 1.0f - fast_noise * (wind * 0.06f);
       fast_b = fast_b * 0.65f + fast_target * 0.35f;
 
@@ -54,7 +54,7 @@
       // D2/D3/D4 are 120° apart; projecting onto them guarantees one is always
       // brighter and one always dimmer — no more three-way ties
       // Advance ~2.5°/tick = full rotation in ~144 ticks = ~7s; jitter for organic feel
-      lean_angle += 2.5f + ((float)(rand() % 1000) / 500.0f - 1.0f) * 1.5f;
+      lean_angle += 2.5f + (flicker_math::random_unit() * 2.0f - 1.0f) * 1.5f;
       if (lean_angle >= 360.0f) lean_angle -= 360.0f;
       if (lean_angle <    0.0f) lean_angle += 360.0f;
 

@@ -89,6 +89,13 @@ jobs:
           cd tests
           g++ -std=c++14 -I../esphome/algorithms \
             test_flicker_math.cpp -o test_flicker_math
+          g++ -std=c++14 -I../esphome/algorithms -Istubs \
+            test_flicker_rand.cpp -o test_flicker_rand_default
+          g++ -std=c++14 -I../esphome/algorithms -DVELAFLAME_BATTERY_POWERED \
+            test_flicker_rand.cpp -o test_flicker_rand_battery
 
       - name: Run tests
-        run: tests/test_flicker_math
+        run: |
+          tests/test_flicker_math
+          tests/test_flicker_rand_default
+          tests/test_flicker_rand_battery

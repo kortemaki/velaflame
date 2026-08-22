@@ -18,9 +18,15 @@ esphome:
   friendly_name: ${friendly_name}
   includes:
     - algorithms/flicker_math.h
+    - algorithms/flicker_rand.h
   on_boot:
     priority: -100  # runs after state restore
     then:
+      - lambda: |-
+          #ifdef VELAFLAME_BATTERY_POWERED
+          // set random seed to ensure a variable pattern on each boot
+          srand(micros());
+          #endif
       - if:
           condition:
             lambda: "return !id(color_initialized);"
@@ -336,7 +342,7 @@ script:
                 int min_ms = (int)id(flicker_min_interval).state;
                 int max_ms = (int)id(flicker_max_interval).state;
                 if (max_ms <= min_ms) max_ms = min_ms + 100;
-                return min_ms + random(max_ms - min_ms);
+                return min_ms + (int)(flicker_math::random_unit() * (max_ms - min_ms));
 
 # LED Driver info:
 # https://www.ti.com/lit/ds/symlink/tlc59116.pdf

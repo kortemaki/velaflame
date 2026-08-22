@@ -10,3 +10,5 @@ tests/*.obj
 tests/*.pdb
 tests/*.o
 tests/test_flicker_math
+tests/test_flicker_rand_default
+tests/test_flicker_rand_battery

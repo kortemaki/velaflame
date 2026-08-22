@@ -49,3 +49,21 @@ ESPHome configurations in this `config.yaml` if desired.
 
 If you make any improvements (especially to the LED or Wick flicker code),
 please open a PR so we can improve things for everyone.
+
+## Battery-powered builds
+
+By default, the flicker effect seeds its randomness from `esp_random()`, the
+ESP32 hardware RNG, for higher-quality (non-repeating) flicker patterns. If
+you are building a battery-powered variant that keeps the WiFi/BT radios off
+most of the time, define the `VELAFLAME_BATTERY_POWERED` macro to fall back
+to the plain `rand()` function instead, e.g. by adding this to your
+`config.yaml`:
+
+```yaml
+esphome:
+  platformio_options:
+    build_flags:
+      - -DVELAFLAME_BATTERY_POWERED
+```
+
+See [flicker_rand.h](esphome/algorithms/flicker_rand.h) for details.
