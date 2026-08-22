@@ -2,3 +2,10 @@
 secrets.yaml
 *.DS_Store
 *.gitignore
+
+# Test build artifacts
+tests/*.exe
+tests/*.obj
+tests/*.pdb
+tests/*.o
+tests/test_flicker_math
