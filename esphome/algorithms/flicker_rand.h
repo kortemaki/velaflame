@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Brian Alvarez
 //
-// Random source for the candle flicker effect (flicker_1st.yaml).
+// Random source shared by the candle flicker effect (flicker_1st.yaml) and
+// the wick-pulse timing jitter (velaflame.yaml's flicker_loop script).
 //
 // The flicker effect draws ~42 random values/sec on average while active
 // (two per 50ms tick for fast jitter + flame lean, plus one extra every
-// 10th tick for the slow gust layer — see flicker_1st.yaml). That rate is
-// trivial for either random source below; the choice here is about entropy
-// quality and power behavior, not throughput.
+// 10th tick for the slow gust layer — see flicker_1st.yaml). The wick-pulse
+// timing draws one value per pulse cycle (on the order of once every few
+// hundred ms). Both rates are trivial for either random source below; the
+// choice here is about entropy quality and power behavior, not throughput.
 //
 // Default (no macro defined): esp_random(), the ESP32 hardware RNG. It is
 // fed by RF noise from the WiFi/BT radios when active, falling back to an

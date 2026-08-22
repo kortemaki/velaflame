@@ -337,7 +337,7 @@ script:
                 int min_ms = (int)id(flicker_min_interval).state;
                 int max_ms = (int)id(flicker_max_interval).state;
                 if (max_ms <= min_ms) max_ms = min_ms + 100;
-                return min_ms + random(max_ms - min_ms);
+                return min_ms + (int)(flicker_math::random_unit() * (max_ms - min_ms));
 
 # LED Driver info:
 # https://www.ti.com/lit/ds/symlink/tlc59116.pdf
