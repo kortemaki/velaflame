@@ -18,6 +18,7 @@ esphome:
   friendly_name: ${friendly_name}
   includes:
     - algorithms/flicker_math.h
+    - algorithms/flicker_rand.h
   on_boot:
     priority: -100  # runs after state restore
     then:
