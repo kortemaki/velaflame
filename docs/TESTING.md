@@ -3,7 +3,7 @@
 ## Overview
 
 The flicker algorithm's core math lives in
-[`esphome/algorithms/flicker_math.h`](esphome/algorithms/flicker_math.h) — a
+[`esphome/algorithms/flicker_math.h`](../esphome/algorithms/flicker_math.h) — a
 standalone C++ header with **no ESPHome dependencies**. This lets us compile and
 test the real C++ off-target (on your dev machine) using
 [doctest](https://github.com/doctest/doctest) — a single-header C++ test
