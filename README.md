@@ -20,7 +20,7 @@ market today!
 
 ## Installing new firmware
 
-To flash the new firmware, follow these [Instructions](FLASH_FIRMWARE.md)
+To flash the new firmware, follow these [Instructions](docs/FLASH_FIRMWARE.md)
 
 NOTE that this will fully replace the existing firmware. Assume this is an
 irreversable change.

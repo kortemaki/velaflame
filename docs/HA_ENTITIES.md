@@ -1,16 +1,16 @@
 # Home Assistant Entities
 
 Copyright (C) 2026 Brian Alvarez. Licensed under the
-[GNU General Public License v3.0](LICENSE).
+[GNU General Public License v3.0](../LICENSE).
 
 ## Overview
 
 Velaflame is an ESPHome device, so Home Assistant discovers its entities
 automatically via the ESPHome native API — there is no separate MQTT
 discovery payload to maintain. All entities are declared in
-[esphome/velaflame.yaml](esphome/velaflame.yaml), with the LED flicker math
-implemented in [esphome/algorithms/flicker_1st.yaml](esphome/algorithms/flicker_1st.yaml)
-and [esphome/algorithms/flicker_math.h](esphome/algorithms/flicker_math.h).
+[esphome/velaflame.yaml](../esphome/velaflame.yaml), with the LED flicker math
+implemented in [esphome/algorithms/flicker_1st.yaml](../esphome/algorithms/flicker_1st.yaml)
+and [esphome/algorithms/flicker_math.h](../esphome/algorithms/flicker_math.h).
 
 Each physical candle exposes **11 entities** to Home Assistant:
 
@@ -178,11 +178,11 @@ mixed per LED: Red, Green, Blue, and a dedicated White emitter.
 
 ## Reference
 
-- [esphome/velaflame.yaml](esphome/velaflame.yaml) — all entity
+- [esphome/velaflame.yaml](../esphome/velaflame.yaml) — all entity
   definitions (`light`, `number`, `button`, `switch`), outputs, and the
   wick-pulse/flicker-loop scripts.
-- [esphome/algorithms/flicker_1st.yaml](esphome/algorithms/flicker_1st.yaml) —
+- [esphome/algorithms/flicker_1st.yaml](../esphome/algorithms/flicker_1st.yaml) —
   the LED flicker lambda effect attached to `light_main`.
-- [esphome/algorithms/flicker_math.h](esphome/algorithms/flicker_math.h) —
+- [esphome/algorithms/flicker_math.h](../esphome/algorithms/flicker_math.h) —
   pure-math helpers (HSV conversion, lean projection, hue/saturation shift,
-  gamma) shared with unit tests in [tests/test_flicker_math.cpp](tests/test_flicker_math.cpp).
+  gamma) shared with unit tests in [tests/test_flicker_math.cpp](../tests/test_flicker_math.cpp).
