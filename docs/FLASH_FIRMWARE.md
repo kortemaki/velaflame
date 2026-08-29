@@ -90,6 +90,11 @@ Note that this will give you a very bare-bones ESPHome device firmware. You
 will be able to wirelessly upload your full firmware through the ESPHome
 Builder UI later.
 
+If you're building a battery-powered variant, add the
+`-DVELAFLAME_BATTERY_POWERED` compiler flag to your `config.yaml` before
+generating firmware. See [Battery-powered builds](../README.md#battery-powered-builds)
+in the README for details.
+
 ### Flashing tools setup
 
 I used `esptool.py` to upload the new firmware to the velaflame. If you
