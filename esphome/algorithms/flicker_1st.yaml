@@ -9,107 +9,31 @@
 #   id(d2_r/g/b/w) … id(d4_r/g/b/w) - per-LED hardware outputs
 #
 # Algorithm overview:
-#   1. Slow gust layer   — retargets ~every 500ms; cubic distribution for rare deep dips
-#   2. Fast jitter layer — every tick, small turbulence
-#   3. Flame lean        — random-walk angle distributes brightness across D2/D3/D4
-#   4. HSV color shift   — cooler/dimmer LEDs shift hue toward longer wavelengths and
-#                          gain saturation (Bezold-Brücke / Abney effects)
+#   1. Brightness engine  — flicker_math::GustBrightnessEngine (gust_brightness_engine.h):
+#                           slow gust layer retargets ~every 500ms with a cubic
+#                           distribution for rare deep dips, plus a fast jitter layer
+#                           every tick
+#   2. Flame lean + color — flicker_math::render_flicker_frame() (flicker_render.h):
+#                           random-walk lean angle distributes brightness across
+#                           D2/D3/D4, then shifts cooler/dimmer LEDs' hue toward longer
+#                           wavelengths and boosts saturation (Bezold-Brücke / Abney
+#                           effects) before writing gamma-corrected output
+#
+# This split is what makes it easy to swap in an alternate BrightnessEngine
+# while reusing the same lean/color output pipeline.
 
-- lambda:
-    name: "1st flicker"
-    update_interval: 50ms
-    lambda: |-
-      // ── Static state: base flicker ──
-      static float slow_b      = 1.0f;
-      static float fast_b      = 1.0f;
-      static float slow_target = 1.0f;
-      static int   slow_timer  = 0;
-      // ── Static state: lean angle (which LED faces the flame) ──
-      static float lean_angle  = 0.0f;
+lambda:
+  name: "1st flicker"
+  update_interval: 50ms
+  lambda: |-
+    static float lean_angle = 0.0f;
+    static flicker_math::GustBrightnessEngine engine;
 
-      float wind = id(candle_intensity).state;
+    float wind = id(candle_intensity).state;
+    float bri_mult = engine.update(wind);
 
-      // ── Slow gust layer: retarget every ~500ms (10 ticks × 50ms) ──
-      slow_timer++;
-      if (slow_timer >= 10) {
-        slow_timer = 0;
-        float r = flicker_math::random_unit();
-        r = r * r * r;  // cubic: mostly near 1.0, rare dramatic dips
-        slow_target = 1.0f - r * (wind * 0.35f);
-      }
-      // Asymmetric smoothing: slow to dim, fast to recover
-      float alpha = (slow_b > slow_target) ? (0.08f + wind * 0.12f) : 0.30f;
-      slow_b = slow_b * (1.0f - alpha) + slow_target * alpha;
-
-      // ── Fast jitter layer: small turbulence every tick ──
-      float fast_noise = flicker_math::random_unit();
-      float fast_target = 1.0f - fast_noise * (wind * 0.06f);
-      fast_b = fast_b * 0.65f + fast_target * 0.35f;
-
-      float bri_mult = slow_b * fast_b;
-      if (bri_mult < 0.15f) bri_mult = 0.15f;
-      if (bri_mult > 1.0f)  bri_mult = 1.0f;
-
-      // ── Flame lean: random-walk angle around the wick triangle ──
-      // D2/D3/D4 are 120° apart; projecting onto them guarantees one is always
-      // brighter and one always dimmer — no more three-way ties
-      // Advance ~2.5°/tick = full rotation in ~144 ticks = ~7s; jitter for organic feel
-      lean_angle += 2.5f + (flicker_math::random_unit() * 2.0f - 1.0f) * 1.5f;
-      if (lean_angle >= 360.0f) lean_angle -= 360.0f;
-      if (lean_angle <    0.0f) lean_angle += 360.0f;
-
-      auto lf = flicker_math::lean_factors(lean_angle, wind);
-      float lean_d2 = lf.d2;
-      float lean_d3 = lf.d3;
-      float lean_d4 = lf.d4;
-
-      // ── Skip output writes during color/brightness transitions ──
-      // ESPHome's transition system writes uniform color to all_r/g/b/w (fan-out) at
-      // the main loop rate. Our per-LED writes only happen every 50ms, so between
-      // our writes the transition overwrites our values — causing strobing.
-      // Fix: detect an active transition by comparing current vs remote values,
-      // and yield to the transition. Internal state (flicker, lean) keeps advancing.
-      {
-        float tr = fabsf(id(light_main).current_values.get_brightness() - id(light_main).remote_values.get_brightness())
-                 + fabsf(id(light_main).current_values.get_red()        - id(light_main).remote_values.get_red())
-                 + fabsf(id(light_main).current_values.get_green()      - id(light_main).remote_values.get_green())
-                 + fabsf(id(light_main).current_values.get_blue()       - id(light_main).remote_values.get_blue())
-                 + fabsf(id(light_main).current_values.get_white()      - id(light_main).remote_values.get_white());
-        if (tr > 0.02f) return;
-      }
-
-      // ── Read user base color (remote_values stable because publish=false) ──
-      float rem_bri = id(light_main).remote_values.get_brightness();
-      float rem_col = id(light_main).remote_values.get_color_brightness();
-      float rem_r   = id(light_main).remote_values.get_red();
-      float rem_g   = id(light_main).remote_values.get_green();
-      float rem_bv  = id(light_main).remote_values.get_blue();
-      float rem_w   = id(light_main).remote_values.get_white();
-
-      // ── Convert base RGB to HSV ──
-      auto base_hsv = flicker_math::rgb_to_hsv(rem_r, rem_g, rem_bv);
-      float hue   = base_hsv.h;
-      float sat   = base_hsv.s;
-      float val_h = base_hsv.v;
-
-      float ghs = flicker_math::global_hue_shift(bri_mult, wind);
-      float gsb = flicker_math::global_sat_boost(bri_mult, wind);
-
-      // ── Per-LED output: compute shifted color, gamma-correct, write to hardware ──
-      auto write_led = [&](float lean,
-                           esphome::output::FloatOutput &out_r,
-                           esphome::output::FloatOutput &out_g,
-                           esphome::output::FloatOutput &out_b,
-                           esphome::output::FloatOutput &out_w) {
-        auto out = flicker_math::compute_led_output(
-            hue, sat, val_h, ghs, gsb, wind, lean,
-            rem_bri, bri_mult, rem_col, rem_w);
-        out_r.set_level(out.r);
-        out_g.set_level(out.g);
-        out_b.set_level(out.b);
-        out_w.set_level(out.w);
-      };
-
-      write_led(lean_d2, id(d2_r), id(d2_g), id(d2_b), id(d2_w));
-      write_led(lean_d3, id(d3_r), id(d3_g), id(d3_b), id(d3_w));
-      write_led(lean_d4, id(d4_r), id(d4_g), id(d4_b), id(d4_w));
+    flicker_math::render_flicker_frame(
+        id(light_main), lean_angle, wind, bri_mult,
+        {id(d2_r), id(d2_g), id(d2_b), id(d2_w)},
+        {id(d3_r), id(d3_g), id(d3_b), id(d3_w)},
+        {id(d4_r), id(d4_g), id(d4_b), id(d4_w)});
