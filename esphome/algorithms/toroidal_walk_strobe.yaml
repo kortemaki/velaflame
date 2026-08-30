@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Brian Alvarez and Korte Maki
+#
+# Toroidal Walk (Strobe) flicker effect for the main 3-LED combined light
+# (light_main): identical to toroidal_walk.yaml, except the toroidal-walk
+# brightness engine's optional random strobe dip is enabled here.
+
+lambda:
+  name: "Toroidal Walk (Strobe)"
+  update_interval: 50ms
+  lambda: |-
+    static float lean_angle = 0.0f;
+    static flicker_math::ToroidalWalkBrightnessEngine engine;
+
+    float wind = id(candle_intensity).state;
+    engine.set_strobe_enabled(true);
+    float bri_mult = engine.update(wind);
+
+    flicker_math::render_flicker_frame(
+        id(light_main), lean_angle, wind, bri_mult,
+        {id(d2_r), id(d2_g), id(d2_b), id(d2_w)},
+        {id(d3_r), id(d3_g), id(d3_b), id(d3_w)},
+        {id(d4_r), id(d4_g), id(d4_b), id(d4_w)});

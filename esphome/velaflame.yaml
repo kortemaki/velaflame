@@ -22,6 +22,7 @@ esphome:
     - algorithms/brightness_engine.h
     - algorithms/gust_brightness_engine.h
     - algorithms/flicker_render.h
+    - algorithms/toroidal_walk.h
   on_boot:
     priority: -100  # runs after state restore
     then:
@@ -185,7 +186,10 @@ light:
     blue: all_b
     white: all_w
     gamma_correct: 2.0
-    effects: !include algorithms/flicker_1st.yaml
+    effects:
+      - !include algorithms/flicker_1st.yaml
+      - !include algorithms/toroidal_walk.yaml
+      - !include algorithms/toroidal_walk_strobe.yaml
   # Individual LEDs (hidden by default, for advanced per-LED control)
   - platform: rgbw
     name: "${friendly_name} D2"
