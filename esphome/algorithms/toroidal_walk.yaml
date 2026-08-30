@@ -4,8 +4,9 @@
 # Toroidal Walk flicker effect for the main 3-LED combined light (light_main):
 # an alternative brightness engine that follows a 2D random walk over a
 # tileable 64x64 brightness map (torus_map.h) instead of the layered
-# gust/jitter model in flicker_1st.yaml, with an optional random strobe dip
-# layered on top (see the "Toroidal Strobe Effect" switch in velaflame.yaml).
+# gust/jitter model in flicker_1st.yaml. This variant keeps the optional
+# random strobe dip disabled; see toroidal_walk_strobe.yaml for the
+# otherwise-identical variant with it enabled.
 #
 # Reuses the same flame-lean / color-shift / output-writing pipeline as
 # flicker_1st.yaml (flicker_render.h) -- only the brightness source differs.
@@ -18,7 +19,7 @@ lambda:
     static flicker_math::ToroidalWalkBrightnessEngine engine;
 
     float wind = id(candle_intensity).state;
-    engine.set_strobe_enabled(id(toroidal_strobe_enabled));
+    engine.set_strobe_enabled(false);
     float bri_mult = engine.update(wind);
 
     flicker_math::render_flicker_frame(

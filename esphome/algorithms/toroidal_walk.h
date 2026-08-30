@@ -140,9 +140,11 @@ public:
 
 // Adapts ChandelierFlickerEngine to the shared BrightnessEngine interface so
 // it can be used as a drop-in replacement for GustBrightnessEngine in
-// flicker_render.h's pipeline (see toroidal_walk.yaml). `wind` is ignored:
-// this engine's brightness comes entirely from the toroidal walk + strobe,
-// not from the candle_intensity input.
+// flicker_render.h's pipeline (see toroidal_walk.yaml and
+// toroidal_walk_strobe.yaml, which differ only in whether
+// set_strobe_enabled() is passed true or false). `wind` is ignored: this
+// engine's brightness comes entirely from the toroidal walk + strobe, not
+// from the candle_intensity input.
 namespace flicker_math {
 
 class ToroidalWalkBrightnessEngine : public BrightnessEngine {

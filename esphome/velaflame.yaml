@@ -189,6 +189,7 @@ light:
     effects:
       - !include algorithms/flicker_1st.yaml
       - !include algorithms/toroidal_walk.yaml
+      - !include algorithms/toroidal_walk_strobe.yaml
   # Individual LEDs (hidden by default, for advanced per-LED control)
   - platform: rgbw
     name: "${friendly_name} D2"
@@ -226,10 +227,6 @@ globals:
   - id: color_initialized
     type: bool
     restore_value: yes
-    initial_value: "false"
-  - id: toroidal_strobe_enabled
-    type: bool
-    restore_value: no
     initial_value: "false"
 
 number:
@@ -313,19 +310,6 @@ switch:
           id: hbridge_in2
           level: 0
       - output.turn_off: hbridge_nsleep
-  - platform: template
-    name: "Toroidal Strobe Effect"
-    id: toroidal_strobe_switch
-    optimistic: True
-    restore_mode: RESTORE_DEFAULT_OFF
-    turn_on_action:
-      - globals.set:
-          id: toroidal_strobe_enabled
-          value: "true"
-    turn_off_action:
-      - globals.set:
-          id: toroidal_strobe_enabled
-          value: "false"
 
 script:
   - id: pulse_wick
