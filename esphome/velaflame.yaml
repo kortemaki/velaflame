@@ -19,6 +19,9 @@ esphome:
   includes:
     - algorithms/flicker_math.h
     - algorithms/flicker_rand.h
+    - algorithms/brightness_engine.h
+    - algorithms/gust_brightness_engine.h
+    - algorithms/flicker_render.h
   on_boot:
     priority: -100  # runs after state restore
     then:
